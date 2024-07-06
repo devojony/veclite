@@ -14,13 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.devo.build_sqlite.ui.theme.Build_sqliteTheme
 import com.devo.veclite.VecliteLib
-import kotlin.math.PI
-import kotlin.math.asin
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.math.sqrt
-import kotlin.random.Random
-
+import org.sqlite.database.sqlite.SQLiteDatabase
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,44 +32,69 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        AppSQLiteOpenHelper(this, "user.db", null, 1).apply {
+        val sep = ","
+        val dimen = 1000
+        AppSQLiteOpenHelper(this, "vectors.db", null, 1).apply {
 
             writableDatabase?.let { db ->
-                (0..5).forEach { _ ->
-                    db.insert(
-                        "location",
+                // clean this table
+                (0 until 1_00).forEach { id ->
+                    val vec = buildList {
+                        repeat(dimen){
+                            add(id+1.0)
+                        }
+                    }.joinToString(sep)
+
+                    db.insertWithOnConflict(
+                        "vectors",
                         null,
                         ContentValues().apply {
-                            put("lat", Random.nextDouble(3.0) + 39.904211)
-                            put("lng", Random.nextDouble(3.0) + 116.407394)
-                        }
+                            put("id", id)
+                            put("content", "Llamas are members of the camelid family")
+                            put("vec", vec)
+                        },
+                        SQLiteDatabase.CONFLICT_IGNORE
                     )
                 }
             }
 
+            Log.i("TAG", "start query")
+            // use sqlite extension
             readableDatabase?.let {
+
+                val qVec = buildList {
+                    repeat(dimen){
+                        add(10.0)
+                    }
+                }.joinToString(sep)
+
+                Log.i("TAG", "query vec: $qVec")
+
                 val cursor = it.rawQuery(
-                    "select * from location order by distance(lat, lng, 39.904211, 116.407394) limit 100;",
-                    null,
+                    "select * from vectors order by l2d(vec, ?) limit 3;",
+                    arrayOf(qVec)
                 )
-                cursor.moveToFirst()
+
+                Log.i("TAG", "end query")
                 while (cursor.moveToNext()) {
                     val id = cursor.getInt(0)
-                    val lat = cursor.getDouble(1)
-                    val lng = cursor.getDouble(2)
-                    Log.d("TAG", "onStart: $id $lat $lng")
+                    val content = cursor.getString(1)
+                    val vec = cursor.getString(2)
+                    Log.i("TAG", "use sqlite: $id '$content' $vec")
                 }
+
 
             }
 
-        }
+        }.close()
     }
 
 }
 
+
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(text = "Hello $name!", modifier = modifier,)
+    Text(text = "Hello $name!", modifier = modifier)
 }
 
 @Preview(showBackground = true)

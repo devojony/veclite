@@ -1,6 +1,7 @@
 package com.devo.build_sqlite
 
 import android.content.Context
+import com.devo.veclite.VecliteLib
 import org.sqlite.database.sqlite.SQLiteDatabase
 import org.sqlite.database.sqlite.SQLiteOpenHelper
 
@@ -29,23 +30,13 @@ class AppSQLiteOpenHelper(
 
         //创建数据库sql语句并执行
         val useSql = """
-            create table user(
+            create table if not exists vectors(
             id integer primary key autoincrement,
-            username varchar(20),
-            password varchar(20),
-            age integer
+            content varchar(2000),
+            vec text
             )
         """.trimIndent()
         db?.execSQL(useSql)
-
-        val locationSql = """
-            create table location(
-            id integer primary key autoincrement,
-            lat double,
-            lng double
-            )
-        """.trimIndent()
-        db?.execSQL(locationSql)
 
     }
 
