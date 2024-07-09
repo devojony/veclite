@@ -163,8 +163,16 @@ namespace android {
             throw_sqlite3_exception_errcode(env, err, "Could not open database");
             return 0;
         }
-        err = sqlite3_create_collation(db, "localized", SQLITE_UTF8, 0, coll_localized);
+
+        err = sqlite3_enable_load_extension(db, 1);
         if (err != SQLITE_OK) {
+            throw_sqlite3_exception_errcode(env, err, "Could not enable load extension");
+            sqlite3_close(db);
+            return 0;
+        }
+
+        err = sqlite3_create_collation(db, "localized", SQLITE_UTF8, 0, coll_localized);
+         if (err != SQLITE_OK) {
             throw_sqlite3_exception_errcode(env, err, "Could not register collation");
             sqlite3_close(db);
             return 0;
@@ -188,7 +196,7 @@ namespace android {
         // Create wrapper object.
         SQLiteConnection *connection = new SQLiteConnection(db, openFlags, path, label);
 
-        sqlite3_enable_load_extension(db, 1);
+
         // Enable tracing and profiling if requested.
         if (enableTrace) {
             sqlite3_trace(db, &sqliteTraceCallback, connection);

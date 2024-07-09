@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.devo.build_sqlite"
+    namespace = "com.devo.veclite"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.devo.build_sqlite"
+        applicationId = "com.devo.veclite"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
@@ -46,6 +46,8 @@ android {
     }
 }
 
+val ktorVersion: String by project
+
 dependencies {
 
     implementation("androidx.core:core-ktx:1.12.0")
@@ -56,8 +58,14 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+
+    implementation("io.ktor:ktor-client-core:$ktorVersion")
+    implementation("io.ktor:ktor-client-cio:$ktorVersion")
+    implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+    implementation("io.ktor:ktor-serialization-gson:$ktorVersion")
+
     implementation(project(":sqlite3"))
-    implementation(project(":veclite"))
+    implementation(project(":extension"))
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

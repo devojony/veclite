@@ -13,8 +13,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "build_sqlite"
+rootProject.name = "veclite"
 include(":app")
 include(":sqlite3")
-
-include(":veclite")
+include(":extension")
