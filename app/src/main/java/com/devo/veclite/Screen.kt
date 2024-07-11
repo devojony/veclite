@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
@@ -39,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -96,7 +98,7 @@ fun Actions(
     onSearchContent: (String) -> Unit = {},
     onRefresh: () -> Unit = {},
 
-) {
+    ) {
     Column {
 
         FloatingActionButton(
@@ -201,9 +203,18 @@ fun AppBar(
 @Composable
 fun ListItem(item: ContentItem) {
     Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text(text = item.id.toString())
+        Text(modifier = Modifier.widthIn(min=16.dp,max=48.dp), text = item.id.toString())
         Spacer(modifier = Modifier.width(8.dp))
-        Text(text = item.content)
+        Text(
+            modifier = Modifier.weight(1f),
+            text = item.content,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
+        )
+        item.score?.let {
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = "%.3f".format(it))
+        }
     }
 }
 

@@ -1,31 +1,25 @@
 package com.devo.veclite
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
+import com.devo.extension.VecliteLib
 import com.devo.veclite.ui.theme.VecliteTheme
 import com.devo.veclite.util.AppSQLite
-import com.devo.extension.VecliteLib
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.defaultRequest
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
-import io.ktor.serialization.gson.gson
+import com.devo.veclite.util.Ollama
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
 
 class MainActivity : ComponentActivity() {
 
@@ -41,18 +35,20 @@ class MainActivity : ComponentActivity() {
         AppSQLite(this, "vectors.db", null, 1)
     }
 
-    private val searchType by lazy {
-        mutableStateOf(SearchType.L2)
+    private val searchType = MutableStateFlow(SearchType.L2)
+
+    private val sqlFunc = searchType.map {
+        when (it) {
+            SearchType.NIP -> "nip_dis(vec, ?)"
+            SearchType.COS -> "cos_dis(vec, ?)"
+            else -> "l2_dis(vec, ?)"
+        }
     }
 
-    private val client by lazy {
-        HttpClient(CIO) {
-            install(ContentNegotiation) {
-                gson()
-            }
-            defaultRequest {
-                url("http://ollama.devo.top:99/")
-            }
+    private val sqlSort = searchType.map {
+        when (it) {
+            SearchType.NIP, SearchType.COS -> "DESC"
+            else -> "ASC"
         }
     }
 
@@ -63,7 +59,7 @@ class MainActivity : ComponentActivity() {
             VecliteTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    val (filter, onFilterChange) = remember { searchType }
+                    val filter = searchType.collectAsState()
 
                     MainScreen(
                         inputState = inputState,
@@ -71,9 +67,10 @@ class MainActivity : ComponentActivity() {
                         onAddContent = ::addContent,
                         onSearchContent = ::searchContent,
                         onRefresh = ::refresh,
-                        filter = filter,
-                        onFilterChange = onFilterChange
-
+                        filter = filter.value,
+                        onFilterChange = {
+                            searchType.tryEmit(it)
+                        }
                     )
                 }
             }
@@ -83,12 +80,9 @@ class MainActivity : ComponentActivity() {
     private fun addContent(content: String) {
 
         lifecycleScope.launch {
-            val result = client.post("api/embeddings") {
-                contentType(ContentType.Application.Json)
-                setBody(mapOf("model" to "mxbai-embed-large", "prompt" to content))
-            }.body<EmbeddingResult>()
+            val result = Ollama.embedText(content)
 
-            val vec = result.embedding.toDoubleArray()
+            val vec = result.toDoubleArray()
             val item = ContentItem(content = content, vec = vec)
 
             val ids = appSqlite.writableDatabase?.insert("vectors", null, item.toContentValues())
@@ -99,28 +93,13 @@ class MainActivity : ComponentActivity() {
 
     private fun searchContent(content: String) {
         lifecycleScope.launch {
-            val result = client.post("api/embeddings") {
-                contentType(ContentType.Application.Json)
-                setBody(mapOf("model" to "mxbai-embed-large", "prompt" to content))
-            }.body<EmbeddingResult>()
+            val vec = Ollama.embedText(content).joinToString(",")
 
-            val vec = (result.embedding.toDoubleArray()).joinToString(",")
-
-            val func = when(searchType.value) {
-                SearchType.NIP -> {
-                    "nip_dis(vec, ?) desc"
-                }
-                SearchType.COS -> {
-                    "cos_dis(vec, ?) desc"
-                }
-                else -> {
-                    "l2_dis(vec, ?)"
-                }
-            }
-
+            val func = sqlFunc.stateIn(this).value
+            val sort = sqlSort.stateIn(this).value
 
             val cursor = appSqlite.readableDatabase?.rawQuery(
-                "select * from vectors order by $func limit 5;",
+                "select id, content, vec, $func as score from vectors order by score $sort limit 5;",
                 arrayOf(vec)
             )
 
@@ -134,7 +113,8 @@ class MainActivity : ComponentActivity() {
                             content = it.getString(1),
                             vec = it.getString(2).split(",").map { d ->
                                 d.toDouble()
-                            }.toDoubleArray()
+                            }.toDoubleArray(),
+                            score = it.getDouble(3)
                         ),
                     )
                 }
@@ -163,6 +143,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+
     override fun onStart() {
         super.onStart()
         refresh()
@@ -171,7 +152,6 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         appSqlite.close()
-        client.close()
     }
 
 }
