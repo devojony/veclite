@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.devo.extension.Veclite.Companion.SearchType
 import com.devo.veclite.ui.theme.VecliteTheme
 
 @Composable
@@ -211,6 +212,12 @@ fun ListItem(item: ContentItem) {
             maxLines = 3,
             overflow = TextOverflow.Ellipsis
         )
+
+        item.extra?.let {
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = it.size.toString())
+        }
+
         item.score?.let {
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = "%.3f".format(it))

@@ -1,6 +1,7 @@
 package com.devo.veclite
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,17 +12,18 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
-import com.devo.extension.VecliteLib
+import com.devo.extension.Veclite
+import com.devo.extension.Veclite.Companion.SearchType
 import com.devo.veclite.ui.theme.VecliteTheme
-import com.devo.veclite.util.AppSQLite
 import com.devo.veclite.util.Ollama
+import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 
 class MainActivity : ComponentActivity() {
+
+    private val tag = "MainActivity"
 
     private val inputState by lazy {
         mutableStateOf("")
@@ -31,30 +33,20 @@ class MainActivity : ComponentActivity() {
         mutableStateListOf<ContentItem>()
     }
 
-    private val appSqlite by lazy {
-        AppSQLite(this, "vectors.db", null, 1)
-    }
-
     private val searchType = MutableStateFlow(SearchType.L2)
 
-    private val sqlFunc = searchType.map {
-        when (it) {
-            SearchType.NIP -> "nip_dis(vec, ?)"
-            SearchType.COS -> "cos_dis(vec, ?)"
-            else -> "l2_dis(vec, ?)"
+    private val veclite by lazy {
+        Veclite(applicationContext, "vectors") {
+            Ollama.embedText(it)
         }
     }
 
-    private val sqlSort = searchType.map {
-        when (it) {
-            SearchType.NIP, SearchType.COS -> "DESC"
-            else -> "ASC"
-        }
+    private val gson by lazy {
+        Gson()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        VecliteLib()
         setContent {
             VecliteTheme {
                 // A surface container using the 'background' color from the theme
@@ -80,78 +72,42 @@ class MainActivity : ComponentActivity() {
     private fun addContent(content: String) {
 
         lifecycleScope.launch {
-            val result = Ollama.embedText(content)
-
-            val vec = result.toDoubleArray()
-            val item = ContentItem(content = content, vec = vec)
-
-            val ids = appSqlite.writableDatabase?.insert("vectors", null, item.toContentValues())
-
-            contentList.add(item.copy(id = ids))
+            val item = ContentItem(content = content)
+            val id = veclite.addDocument(content, null)
+            contentList.add(item.copy(id = id))
         }
     }
 
     private fun searchContent(content: String) {
         lifecycleScope.launch {
-            val vec = Ollama.embedText(content).joinToString(",")
+            val list = veclite.queryVectors(content, searchType.value)
 
-            val func = sqlFunc.stateIn(this).value
-            val sort = sqlSort.stateIn(this).value
+            Log.i(tag, "searchContent: ${list.size}")
 
-            val cursor = appSqlite.readableDatabase?.rawQuery(
-                "select id, content, vec, $func as score from vectors order by score $sort limit 5;",
-                arrayOf(vec)
-            )
+            if (list.isEmpty()) return@launch
 
-            cursor?.let {
-                contentList.clear()
-                it.move(-1)
-                while (it.moveToNext()) {
-                    contentList.add(
-                        ContentItem(
-                            id = it.getLong(0),
-                            content = it.getString(1),
-                            vec = it.getString(2).split(",").map { d ->
-                                d.toDouble()
-                            }.toDoubleArray(),
-                            score = it.getDouble(3)
-                        ),
-                    )
-                }
+            contentList.clear()
+            gson.toJson(list).let {
+                contentList.addAll(gson.fromJson(it, Array<ContentItem>::class.java).asList())
             }
+
         }
     }
 
     private fun refresh() {
         contentList.clear()
-        appSqlite.readableDatabase?.rawQuery(
-            "select * from vectors;",
-            null
-        )?.let {
-            it.move(-1)
-            while (it.moveToNext()) {
-                contentList.add(
-                    ContentItem(
-                        id = it.getLong(0),
-                        content = it.getString(1),
-                        vec = it.getString(2).split(",").map { d ->
-                            d.toDouble()
-                        }.toDoubleArray()
-                    ),
-                )
+
+        contentList.addAll(veclite.queryDocuments().map {
+            gson.toJson(it).run {
+                gson.fromJson(this, ContentItem::class.java)
             }
-        }
+        })
     }
 
 
     override fun onStart() {
         super.onStart()
         refresh()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        appSqlite.close()
     }
 
 }

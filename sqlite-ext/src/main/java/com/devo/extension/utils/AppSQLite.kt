@@ -1,11 +1,11 @@
-package com.devo.veclite.util
+package com.devo.extension.utils
 
 import android.content.Context
 import org.sqlite.database.sqlite.SQLiteDatabase
 import org.sqlite.database.sqlite.SQLiteOpenHelper
 
 
-class AppSQLite(
+internal class AppSQLite(
     private val context: Context?,
     name: String?,
     factory: SQLiteDatabase.CursorFactory?,
@@ -31,8 +31,9 @@ class AppSQLite(
         val useSql = """
             create table if not exists vectors(
             id integer primary key autoincrement,
-            content varchar(2000),
-            vec text
+            content varchar(2000) not null,
+            vec text not null,
+            extra text null
             )
         """.trimIndent()
         db?.execSQL(useSql)

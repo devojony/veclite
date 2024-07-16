@@ -32,7 +32,7 @@ object Ollama {
         }
     }
 
-    suspend fun embedText(text: String): List<Double> {
+    suspend fun embedText(text: String): DoubleArray {
 
         val result = client.post("api/embeddings") {
             contentType(ContentType.Application.Json)
@@ -42,7 +42,7 @@ object Ollama {
             }
         }.body<EmbeddingResult>()
 
-        return result.embedding
+        return result.embedding.toDoubleArray()
     }
 
 }

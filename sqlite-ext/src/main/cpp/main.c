@@ -29,7 +29,7 @@ static void l2d_func(sqlite3_context *context, int argc, sqlite3_value **argv) {
     v1->size = 0;
     v2->size = 0;
     v1->data = string_to_double_array((const char *) arg1, &v1->size);
-    v2->data= string_to_double_array((const char *) arg2, &v2->size);
+    v2->data = string_to_double_array((const char *) arg2, &v2->size);
 
     double distance = l2(*v1, *v2);
     sqlite3_result_double(context, distance);
@@ -53,7 +53,7 @@ static void cos_distance_func(sqlite3_context *context, int argc, sqlite3_value 
     v1->size = 0;
     v2->size = 0;
     v1->data = string_to_double_array((const char *) arg1, &v1->size);
-    v2->data= string_to_double_array((const char *) arg2, &v2->size);
+    v2->data = string_to_double_array((const char *) arg2, &v2->size);
 
     double distance = cosine_similarity(*v1, *v2);
     sqlite3_result_double(context, distance);
@@ -79,12 +79,13 @@ static void nip_distance_func(sqlite3_context *context, int argc, sqlite3_value 
     v1->size = 0;
     v2->size = 0;
     v1->data = string_to_double_array((const char *) arg1, &v1->size);
-    v2->data= string_to_double_array((const char *) arg2, &v2->size);
+    v2->data = string_to_double_array((const char *) arg2, &v2->size);
 
     double distance = negative_inner_product_distance(*v1, *v2);
     sqlite3_result_double(context, distance);
     app_log("NIP distance = %f", distance);
 
+    size_t i = 0;
     vector_free(v1);
     vector_free(v2);
 

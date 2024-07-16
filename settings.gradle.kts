@@ -16,4 +16,4 @@ dependencyResolutionManagement {
 rootProject.name = "veclite"
 include(":app")
 include(":sqlite3")
-include(":extension")
+include(":sqlite-ext")

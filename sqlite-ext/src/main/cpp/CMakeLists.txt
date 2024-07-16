@@ -26,10 +26,13 @@ include_directories(BEFORE "include")
 # System.loadLibrary() and pass the name of the library defined here;
 # for GameActivity/NativeActivity derived applications, the same library name must be
 # used in the AndroidManifest.xml file.
+
+# 指定库的源文件
+file(GLOB_RECURSE SOURCES "src/*.c" "src/*.cpp")
+
 add_library(${CMAKE_PROJECT_NAME} SHARED
         # List C/C++ source files with relative paths to this CMakeLists.txt.
-        src/vector.c
-        src/utils.c
+        ${SOURCES}
         main.c
         )
 
