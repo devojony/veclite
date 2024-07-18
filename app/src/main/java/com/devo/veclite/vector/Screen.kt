@@ -1,6 +1,5 @@
-package com.devo.veclite
+package com.devo.veclite.vector
 
-import android.util.Log
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
@@ -45,10 +43,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.devo.extension.Veclite.Companion.SearchType
+import com.devo.veclite.entity.ContentItem
 import com.devo.veclite.ui.theme.VecliteTheme
 
 @Composable
-fun MainScreen(
+fun VectorScreen(
     modifier: Modifier = Modifier,
     inputState: MutableState<String> = mutableStateOf(""),
     contentList: List<ContentItem> = listOf(),
@@ -227,10 +226,10 @@ fun ListItem(item: ContentItem) {
 
 @Preview
 @Composable
-fun MainPreview() {
+fun VectorPreview() {
     VecliteTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            MainScreen(
+            VectorScreen(
                 contentList = listOf(
                     ContentItem(
                         id = 1,

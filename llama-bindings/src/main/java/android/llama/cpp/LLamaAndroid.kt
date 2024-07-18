@@ -13,8 +13,10 @@ import kotlin.concurrent.thread
 class LLamaAndroid {
     private val tag: String? = this::class.simpleName
 
-    private val threadLocalState: ThreadLocal<State> = ThreadLocal<State>().apply {
-        set(State.Idle)
+    private val threadLocalState: ThreadLocal<State> = object : ThreadLocal<State>() {
+        override fun initialValue(): State {
+            return State.Idle
+        }
     }
 
     private val runLoop: CoroutineDispatcher = Executors.newSingleThreadExecutor {
@@ -95,7 +97,7 @@ class LLamaAndroid {
             when (threadLocalState.get()) {
                 is State.Idle -> {
                     val model = load_model(pathToModel)
-                    if (model == 0L)  throw IllegalStateException("load_model() failed")
+                    if (model == 0L) throw IllegalStateException("load_model() failed")
 
                     val context = new_context(model)
                     if (context == 0L) throw IllegalStateException("new_context() failed")
@@ -106,6 +108,7 @@ class LLamaAndroid {
                     Log.i(tag, "Loaded model $pathToModel")
                     threadLocalState.set(State.Loaded(model, context, batch))
                 }
+
                 else -> throw IllegalStateException("Model already loaded")
             }
         }
@@ -121,6 +124,7 @@ class LLamaAndroid {
                 }
                 kv_cache_clear(state.context)
             }
+
             else -> {}
         }
     }.flowOn(runLoop)
@@ -140,6 +144,7 @@ class LLamaAndroid {
 
                     threadLocalState.set(State.Idle)
                 }
+
                 else -> {}
             }
         }
@@ -159,8 +164,8 @@ class LLamaAndroid {
         }
 
         private sealed interface State {
-            data object Idle: State
-            data class Loaded(val model: Long, val context: Long, val batch: Long): State
+            data object Idle : State
+            data class Loaded(val model: Long, val context: Long, val batch: Long) : State
         }
 
         // Enforce only one instance of Llm.

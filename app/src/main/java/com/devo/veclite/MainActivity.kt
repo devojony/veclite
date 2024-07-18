@@ -1,113 +1,92 @@
 package com.devo.veclite
 
+import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.lifecycleScope
-import com.devo.extension.Veclite
-import com.devo.extension.Veclite.Companion.SearchType
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.devo.veclite.llama.LLamaActivity
 import com.devo.veclite.ui.theme.VecliteTheme
-import com.devo.veclite.util.Ollama
-import com.google.gson.Gson
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.launch
-
+import com.devo.veclite.vector.VectorActivity
 
 class MainActivity : ComponentActivity() {
-
-    private val tag = "MainActivity"
-
-    private val inputState by lazy {
-        mutableStateOf("")
-    }
-
-    private val contentList by lazy {
-        mutableStateListOf<ContentItem>()
-    }
-
-    private val searchType = MutableStateFlow(SearchType.L2)
-
-    private val veclite by lazy {
-        Veclite(applicationContext, "vectors") {
-            Ollama.embedText(it)
-        }
-    }
-
-    private val gson by lazy {
-        Gson()
-    }
-
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             VecliteTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    val filter = searchType.collectAsState()
+                    Scaffold(
+                        topBar = { TopAppBar(title = { Text(text = "Veclite") }) }
+                    ) { paddingValues ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(paddingValues),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            ElevatedButton(onClick = {
+                                startActivity(
+                                    Intent(
+                                        this@MainActivity,
+                                        VectorActivity::class.java
+                                    )
+                                )
+                            }) {
+                                Text(text = "向量数据库Demo")
+                            }
 
-                    MainScreen(
-                        inputState = inputState,
-                        contentList = contentList.toList(),
-                        onAddContent = ::addContent,
-                        onSearchContent = ::searchContent,
-                        onRefresh = ::refresh,
-                        filter = filter.value,
-                        onFilterChange = {
-                            searchType.tryEmit(it)
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            ElevatedButton(onClick = {
+                                startActivity(
+                                    Intent(
+                                        this@MainActivity,
+                                        LLamaActivity::class.java
+                                    )
+                                )
+                            }) {
+                                Text(text = "LLama.cpp Demo")
+                            }
                         }
-                    )
+                    }
                 }
             }
         }
     }
+}
 
-    private fun addContent(content: String) {
+@Composable
+fun Greeting(name: String, modifier: Modifier = Modifier) {
+    Text(
+        text = "Hello $name!",
+        modifier = modifier
+    )
+}
 
-        lifecycleScope.launch {
-            val item = ContentItem(content = content)
-            val id = veclite.addDocument(content, null)
-            contentList.add(item.copy(id = id))
-        }
+@Preview(showBackground = true)
+@Composable
+fun GreetingPreview() {
+    VecliteTheme {
+        Greeting("Android")
     }
-
-    private fun searchContent(content: String) {
-        lifecycleScope.launch {
-            val list = veclite.queryVectors(content, searchType.value)
-
-            Log.i(tag, "searchContent: ${list.size}")
-
-            if (list.isEmpty()) return@launch
-
-            contentList.clear()
-            gson.toJson(list).let {
-                contentList.addAll(gson.fromJson(it, Array<ContentItem>::class.java).asList())
-            }
-
-        }
-    }
-
-    private fun refresh() {
-        contentList.clear()
-
-        contentList.addAll(veclite.queryDocuments().map {
-            gson.toJson(it).run {
-                gson.fromJson(this, ContentItem::class.java)
-            }
-        })
-    }
-
-
-    override fun onStart() {
-        super.onStart()
-        refresh()
-    }
-
 }

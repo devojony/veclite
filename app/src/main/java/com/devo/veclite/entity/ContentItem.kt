@@ -1,6 +1,4 @@
-package com.devo.veclite
-
-import android.content.ContentValues
+package com.devo.veclite.entity
 
 data class ContentItem(
     val id: Long? = null,
