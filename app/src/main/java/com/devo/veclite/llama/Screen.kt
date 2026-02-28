@@ -1,5 +1,6 @@
 package com.devo.veclite.llama
 
+import android.provider.CalendarContract.Colors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,6 +44,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.motionEventSpy
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -92,35 +95,40 @@ fun InputField(viewModel: LLamaViewModel) {
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
+            .padding(vertical = 4.dp)
     ) {
 
         Row(
             verticalAlignment = Alignment.Bottom
         ) {
-            Box(
-                modifier = Modifier
-                    .padding(8.dp)
-                    .clip(MaterialTheme.shapes.extraSmall)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .weight(1f)
-            ) {
 
-                BasicTextField(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .wrapContentHeight()
-                        .heightIn(32.dp)
-                        .padding(horizontal = 2.dp)
-                        .align(Alignment.Center),
-                    value = inputValue,
-                    onValueChange = onValueChange,
-                    textStyle = TextStyle.Default.copy(
-                        textAlign = TextAlign.Justify
-                    )
-                )
-            }
+            BasicTextField(
+                modifier = Modifier
+                    .weight(1f)
+                    .wrapContentHeight()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                value = inputValue,
+                onValueChange = onValueChange,
+                textStyle = TextStyle.Default.copy(
+                    textAlign = TextAlign.Justify
+                ),
+                decorationBox = { innerTextField ->
+                    Box(
+                        modifier = Modifier
+                            .clip(MaterialTheme.shapes.extraSmall)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(8.dp)
+                            .wrapContentHeight()
+                            .heightIn(min = 20.dp)
+                    ) {
+                        innerTextField()
+                    }
+                }
+            )
+
 
             IconButton(
+                modifier = Modifier,
                 onClick = {
                     if (isLoaded) {
                         viewModel.sendMessage(inputValue)

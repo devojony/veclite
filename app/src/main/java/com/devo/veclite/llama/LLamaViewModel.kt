@@ -13,9 +13,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import java.io.File
 
-//const val modelName = "MiniCPM-2B-dpo-fp16-gguf.gguf"
-const val modelName = "MiniCPM-2B-dpo-q4km-gguf.gguf"
-//const val modelName = "Phi-3-mini-4k-instruct-q4.gguf"
 
 class LLamaViewModel : ViewModel() {
     private val tag = "LLamaViewModel"
@@ -23,7 +20,7 @@ class LLamaViewModel : ViewModel() {
     val toast = _uiToast.distinctUntilChanged { old, new -> old == new }
     private val llama = LLamaAndroid()
     private val messages = mutableListOf(
-        Message(isSelf = true, content = "Hi, I am LLama."),
+        Message(isSelf = true, content = "Hi"),
         Message(isSelf = false, content = "Hi, I am LLama."),
     )
     private val msgListFlow = MutableStateFlow<List<Message>>(messages)
@@ -31,6 +28,7 @@ class LLamaViewModel : ViewModel() {
 
     val isLoaded = MutableStateFlow(false)
 
+    private val model = Model.Phi3
 
     fun tips(text: String) {
         _uiToast.value = text
@@ -38,13 +36,13 @@ class LLamaViewModel : ViewModel() {
 
     fun loadModel() {
         viewModelScope.launch(Dispatchers.IO) {
-            val modelFile = File(VecliteApp.modelDir, modelName)
+            val modelFile = File(VecliteApp.modelDir, model.name)
             if (modelFile.exists())
                 try {
                     Log.i(tag, "开始加载模型: ${modelFile.absolutePath}")
                     llama.load(modelFile.absolutePath)
                     isLoaded.emit(true)
-                    tips("加载模型成功")
+                    tips("加载模型成功: ${model.name}")
                 } catch (e: IllegalStateException) {
                     Log.e(tag, "加载模型失败", e)
                     tips("加载模型失败")
@@ -59,20 +57,29 @@ class LLamaViewModel : ViewModel() {
         msgListFlow.value += Message(isSelf = false, content = "")
         // 孔子的核心思想是什么
         viewModelScope.launch {
-            llama.send("<用户>${message}<AI>")
+            val content = msgListFlow.value.filter { it.content.isNotBlank() }
+                .joinToString(separator = "\n") {
+                    if (it.isSelf) {
+                        model.createUserMessage(it.content)
+                    } else {
+                        model.createAssistantMessage(it.content)
+                    }
+                }
+            llama.send(content)
                 .catch {
                     tips("send() failed\n$it")
                     msgListFlow.value = msgListFlow.value.dropLast(1)
                 }
                 .collect {
                     val last = msgListFlow.value.last()
-                    msgListFlow.value = msgListFlow.value.dropLast(1) + last.copy(content = last.content + it)
+                    msgListFlow.value = msgListFlow.value.dropLast(1) + last.copy(content = last.content + model.parseResponse(it))
                 }
         }
     }
 
     override fun onCleared() {
         super.onCleared()
+        Log.i(tag, "释放模型资源")
         viewModelScope.launch { llama.unload() }
     }
 
